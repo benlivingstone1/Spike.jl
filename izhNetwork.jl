@@ -28,21 +28,19 @@ module izhNetwork
     
             # Create the neurons
             neurons = Vector{Any}(undef, numNeurons)
-            # neurons[1:Ne] .= ex_neuron()            # excitatory neurons
-            # neurons[Ne+1:numNeurons] .= in_neuron() # inhibitory neurons
             lenNeur = length(neurons)
             for i=1:lenNeur
                 if i < Ne
-                    neurons[i] = ex_neuron()
+                    neurons[i] = ex_neuron()    # excitatory neurons
                 else
-                    neurons[i] = in_neuron()
+                    neurons[i] = in_neuron()    # inhibitory neurons
                 end
             end
     
             # Generate weight matrix 
             weights = rand(numNeurons, numNeurons) # Generate random nums between 0-1
-            weights[:, 1:Ne] .= weights[:, 1:Ne] .* 0.5     # excitatory weights
-            weights[:, Ne+1:end] .= weights[:, Ne+1:end] .* -1  # inhibitory weights
+            weights[:, 1:Ne-1] .= weights[:, 1:Ne-1] .* 0.5     # excitatory weights
+            weights[:, Ne:end] .= weights[:, Ne:end] .* -1  # inhibitory weights
 
             new(numNeurons, Ni, Ne, neurons, weights)
             
@@ -55,8 +53,14 @@ module izhNetwork
         firings = []
 
         for t = 1:time
-            I = [5*randn(network.Ne); 2*randn(network.Ni)]  # thalamic input
-            fired = [i for i=1:length(network.neurons) if network.neurons[i].v >= network.neurons[i].thrs]
+            I = [10*randn(network.Ne); 5*randn(network.Ni)]  # thalamic input
+            # fired = [i for i=1:length(network.neurons) if network.neurons[i].v >= network.neurons[i].thrs]
+            fired = []
+            for i = 1:network.numNeurons
+                if network.neurons[i].v >= network.neurons[i].thrs
+                    append!(fired, i)
+                end
+            end
             len_fired = length(fired)
             len_firings = length(firings)
 

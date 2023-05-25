@@ -19,7 +19,7 @@ module Izhikevich
 
         # Parameters for the Izhikevich model
 
-        # 'a' describes teh time scale of the recovery variable 'u'
+        # 'a' describes the time scale of the recovery variable 'u'
         a::Float64  # Smaller values result in slower recovery. typically a=0.02
 
         # 'b' describes the sensitivity of the recovery variable 'u' to subthreshold fluctuations
@@ -81,13 +81,13 @@ module Izhikevich
 
     export ex_neuron
     function ex_neuron()
-        neuron = izh(-65.0, -14.0, 30, 0.02, 0.2, (-65 + 15)*(rand()^2), (8-6)*(rand()^2))
+        neuron = izh(-65.0, -14.0, 30, 0.02, 0.2, (-65 + 15*rand()^2), (8 - 6*rand()^2))
         return neuron
     end
 
     export in_neuron
     function in_neuron()
-        neuron = izh(-65.0, -14.0, 30, (0.02 + 0.08)*rand(), (0.25 - 0.05)*rand(), -65, 2)
+        neuron = izh(-65.0, -14.0, 30, (0.02 + 0.08*rand()), (0.25 - 0.05*rand()), -65, 2)
         return neuron
     end
 
@@ -110,12 +110,12 @@ module Izhikevich
         neuron.u += du
     end
 
-    function f_v(neuron, i, v, dt)
-        return (0.04 * v * v + 5 * v + 140 - neuron.u + i) * dt
+    function f_v(neuron, I, v, dt)
+        return ((0.04 * v^2) + (5 * v) + 140 - neuron.u + I) * dt
     end
 
     function f_u(neuron, dt)
-        return neuron.a * (neuron.b * neuron.v - neuron.u) * dt
+        return neuron.a * (neuron.b * neuron.v - neuron.u) # * dt
     end
 
 end

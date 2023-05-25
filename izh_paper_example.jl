@@ -28,4 +28,4 @@ for t = 1:1000  # simulation of 1000 ms
     u .= u .+ a.*(b.*v .- u)
 end
 
-plot([spike[1] for spike in firings], [spike[2] for spike in firings], marker = ".",legend = false)
+plot([spike[1] for spike in firings], [spike[2] for spike in firings], marker = ".", ms = 1, legend = false)
