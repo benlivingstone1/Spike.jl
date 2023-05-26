@@ -3,7 +3,7 @@ using .izhNetwork
 using Plots
 
 function main()
-    n = network(50)
+    n = network(1000)
     # run simulation on network for 1000ms and dt of 0.5ms
     t = 1000
     dt = 0.5
