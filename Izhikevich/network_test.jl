@@ -13,7 +13,9 @@ function main()
     y = [all_firings[i][1] for i=1:len_firings]
     x = [all_firings[i][2] for i=1:len_firings]
 
-    display(scatter(x, y, label = "spikes in an SNN", xlabel = "Time (ms)", ylabel = "Neurons", markershape = :rect, legend = false, ms=1))
+    # scatter(x, y, label = "spikes in an SNN", xlabel = "Time (ms)", ylabel = "Neurons", markershape = :rect, legend = false, ms=1)
+    plot = scatter(x, y, label = "spikes in an SNN", xlabel = "Time (ms)", ylabel = "Neurons", markershape = :rect, legend = false, ms=1)
+    savefig(plot, "./plots/1000_neuron_tweaked_input_current.png")
 
 end
 

@@ -53,7 +53,7 @@ module izhNetwork
         firings = []
 
         for t = 1:time
-            I = [5*randn(network.Ne); 2*randn(network.Ni)]  # thalamic input
+            I = [8*randn(network.Ne); 2*randn(network.Ni)]  # thalamic input
             # fired = [i for i=1:length(network.neurons) if network.neurons[i].v >= network.neurons[i].thrs]
             fired = []
             for i = 1:network.numNeurons
