@@ -1,4 +1,4 @@
-using Plots
+using Gadfly, LinearAlgebra
 
 # Create an alpha function
 # larger β increases rate of decay
@@ -91,14 +91,17 @@ end
 
 
 
-numNeurons = 10
+numNeurons = 100
 
 # Define weights matrix, j
-J = rand(numNeurons, numNeurons) .* 0.5
+J = rand(numNeurons, numNeurons)  # Random weights between all neurons  
+J = J[:, 1:Int(numNeurons * 0.8)] .* 0.5  # excitatory neurons 
+J = J[:, Int(numNeurons * 0.8)+1:end] .* -2.0  # inhibitory neurons
+J[diagind(J)] .= 0.0  # no self-excitation
 # Define neuron paramters 
 Vthresh = 1.0
 V0 = 0.0
-I = 0.25
+I = 1.3
 
 # Define time range
 T = 10
@@ -108,12 +111,14 @@ t = [i for i = 0:dt:T]
 # Initialize voltage and spike matrices
 v = zeros(numNeurons, Int(T/dt)+1)  # Voltage for each neuron for each dt
 s = BitArray(undef, numNeurons, Int(T/dt)+1)  # Boolean value representing spikes for each neuron at each dt
+spikes = Matrix{Float64}(undef, numNeurons, Int(T/dt))
 
 for step = 1:Int(T/dt)
     for i=1:numNeurons
         if v[i, step] >= Vthresh
             # A spike occurred
             s[i, step] = 1
+            spikes[i, step] = step * dt
             # Reset v to V0
             v[i, step + 1] = V0
         else
@@ -125,11 +130,40 @@ for step = 1:Int(T/dt)
             v[i, step+1] = v[i, step] + dv
             # No spike occurred
             s[i, step] = 0
+            spikes[i, step] = NaN
         end
     end
 end
 
-plot(t, v[1, :])
-plot!(t, s[1, :])
+# plot(t, v[1, :], label=["voltage"])
+# plot!(t, v[2, :], label=["neuron2"])
+# # scatter!(t, s[1, :], label=["spikes"])
+
+# p = plot()
+# for i = 1:length(spikes[:, 1])
+#     y = ones(length(spikes[i, :])) .* i
+#     Gadfly.push!(p, layer(x=spikes[i, :], y=y, Geom.point))
+# end
+
+# plot(x=spikes[1, :], y=ones(length(spikes[1,:])), Geom.point)
+# for i = 2:length(spikes[:, 1])
+#     push!(p, layer(x=spikes[i,:], y=ones(length(spikes[i,:])) .* i, Geom.point))
+# end
+
+# plot(spikes, x="time", y="Neuron number", Geom.histogram2d)
+
+df = DataFrame(firing = vec(spikes[:]), neuron = repeat(1:size(spikes, 1), outer=size(spikes, 2)))
+df_long = stack(df, Not(:neuron), variable_name=:time)
+
+plot(df_long, x=:time, y=:neuron, Geom.point)
+
+
+
+# # Set axis labels
+# xlabel!("Time")
+# ylabel!("Neuron Number")
+
+# Display the plot
+# plot!()
 
 
