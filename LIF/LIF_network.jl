@@ -81,6 +81,7 @@ J = rand(numNeurons, numNeurons)  # Random weights between all neurons
 J = J[:, 1:Int(numNeurons * 0.8)] .* 0.5  # excitatory neurons 
 J = J[:, Int(numNeurons * 0.8)+1:end] .* -2.0  # inhibitory neurons
 J[diagind(J)] .= 0.0  # no self-excitation
+
 # Define neuron paramters 
 Vthresh = 1.0  # Threshold voltage
 V0 = 0.0  # Initial / Reset voltage
