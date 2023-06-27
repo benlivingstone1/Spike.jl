@@ -1,4 +1,4 @@
-using Gadfly, LinearAlgebra
+using Gadfly, LinearAlgebra, DataFrames
 
 # Create an alpha function
 # larger β increases rate of decay
@@ -20,15 +20,6 @@ function alpha(β, t)
     return α
 end
 
-# function delta(spike_time, T, dt)
-#     t = 0:dt:T
-#     steps = Int(T / dt)
-#     δ = zeros(steps + 1)
-#     δ[Int(spike_time / dt)] = 1
-
-#     return δ
-# end
-
 function delta(t, tl)
     ret = Vector{Int64}(undef, length(tl))
     for i = 1:size(tl)[1]
@@ -41,15 +32,6 @@ function delta(t, tl)
     end
     return ret
 end
-
-# α1 = alpha(1)
-# println(length(α1))
-
-# t = 0:0.01:10
-
-# d1 = delta(5, 10, 0.01)
-# print(length(d1))
-# plot(t, d1.*α1)
 
 # We want to model the following equation: 
 #
@@ -80,38 +62,40 @@ function yPrime(index, I, v, J, N, dt, step, tl, s)
     end
 
     Σ_jm = sum(series_jm)
-
     Σ_δ = sum(delta(t, tl))
-
     dvdt = I - v + Σ_jm - Σ_δ
 
     return dvdt
 
 end
 
+# ******************************
+# START OF MODEL:
+# ******************************
 
-
+# Define number of neurons in the model 
 numNeurons = 100
 
-# Define weights matrix, j
+# Define weights matrix, J
 J = rand(numNeurons, numNeurons)  # Random weights between all neurons  
 J = J[:, 1:Int(numNeurons * 0.8)] .* 0.5  # excitatory neurons 
 J = J[:, Int(numNeurons * 0.8)+1:end] .* -2.0  # inhibitory neurons
 J[diagind(J)] .= 0.0  # no self-excitation
 # Define neuron paramters 
-Vthresh = 1.0
-V0 = 0.0
-I = 1.3
+Vthresh = 1.0  # Threshold voltage
+V0 = 0.0  # Initial / Reset voltage
+I = 1.3  # DC input current 
 
 # Define time range
-T = 10
-dt = 0.1
+# 10 seconds total with time steps of 0.01s 
+T = 10 
+dt = 0.01  
 t = [i for i = 0:dt:T]
 
 # Initialize voltage and spike matrices
 v = zeros(numNeurons, Int(T/dt)+1)  # Voltage for each neuron for each dt
 s = BitArray(undef, numNeurons, Int(T/dt)+1)  # Boolean value representing spikes for each neuron at each dt
-spikes = Matrix{Float64}(undef, numNeurons, Int(T/dt))
+spikes = Matrix{Float64}(undef, numNeurons, Int(T/dt))  # Matrix of firing Times
 
 for step = 1:Int(T/dt)
     for i=1:numNeurons
@@ -135,35 +119,34 @@ for step = 1:Int(T/dt)
     end
 end
 
-# plot(t, v[1, :], label=["voltage"])
-# plot!(t, v[2, :], label=["neuron2"])
-# # scatter!(t, s[1, :], label=["spikes"])
+# ******************************
+# RASTER PLOT OF SIMULATION:
+# ******************************
 
-# p = plot()
-# for i = 1:length(spikes[:, 1])
-#     y = ones(length(spikes[i, :])) .* i
-#     Gadfly.push!(p, layer(x=spikes[i, :], y=y, Geom.point))
-# end
+df = DataFrame(spikes, :auto)
 
-# plot(x=spikes[1, :], y=ones(length(spikes[1,:])), Geom.point)
-# for i = 2:length(spikes[:, 1])
-#     push!(p, layer(x=spikes[i,:], y=ones(length(spikes[i,:])) .* i, Geom.point))
-# end
+# Initialize an empty vector to store the firing points
+firing_times = []
+firing_index = []
 
-# plot(spikes, x="time", y="Neuron number", Geom.histogram2d)
+# Iterate over the columns (time steps) of the DataFrame
+count = 0
 
-df = DataFrame(firing = vec(spikes[:]), neuron = repeat(1:size(spikes, 1), outer=size(spikes, 2)))
-df_long = stack(df, Not(:neuron), variable_name=:time)
+for col in eachcol(df)
+    time_step = count * dt  # Get the column name (time step)
+    global count += 1
+    
+    # Iterate over the rows (neurons) of the DataFrame
+    for (i, value) in enumerate(col)
+        if !isnan(value)
+            neuron_index = i  # Get the neuron index
+            push!(firing_times, time_step)  # Add firing point to the vector
+            push!(firing_index, neuron_index)
+        end
+    end
+end
 
-plot(df_long, x=:time, y=:neuron, Geom.point)
-
-
-
-# # Set axis labels
-# xlabel!("Time")
-# ylabel!("Neuron Number")
-
-# Display the plot
-# plot!()
-
-
+set_default_plot_size(30cm, 8cm)
+raster = plot(x=firing_times, y=firing_index, Geom.point)
+mem_v = plot(x=t, y=v[1, :], Geom.line)
+hstack(raster, mem_v)
