@@ -15,11 +15,16 @@ function alpha(β)
     return α
 end
 
+# The alpha function determines the synaptic pulse
+# sent to all connected neurons
+# β affects the rate at which the postsynaptic current decays. 
 function alpha(β, t)
     α = β * (ℯ*(-β * t))
     return α
 end
 
+# Implementation of the Dirac delta function.
+# The δ(x) = 0, except for x=0 where δ(0)=1
 function delta(t, tl)
     ret = Vector{Int64}(undef, length(tl))
     for i = 1:size(tl)[1]
@@ -69,6 +74,41 @@ function yPrime(index, I, v, J, N, dt, step, tl, s)
 
 end
 
+# *********************
+# Weight functions
+# *********************
+
+function w(a, z)
+    w = (a * π)^-0.5 * exp(-z^2 / a)
+    return w
+end
+
+function J_z(z)
+    Jz = 5 * (1.1 * w((1/28), z) - w((1/20), z))
+    return Jz
+end
+
+function J_ij(i, numNeurons)
+    weights = []
+    for j = 1:numNeurons
+        Jij = J_z(abs(i - j) / numNeurons)
+        push!(weights, Jij)
+    end
+    return weights
+end
+
+function norm_mat(mat)
+    min_val = minimum(mat)
+    max_val = maximum(mat)
+    range_val = max_val - min_val
+
+    norm_mat = (mat .- min_val) ./ range_val
+    norm_mat = (norm_mat .* 1.2) .- 0.2
+
+    return norm_mat
+end
+
+
 # ******************************
 # START OF MODEL:
 # ******************************
@@ -77,20 +117,30 @@ end
 numNeurons = 100
 
 # Define weights matrix, J
-J = rand(numNeurons, numNeurons)  # Random weights between all neurons  
-J = J[:, 1:Int(numNeurons * 0.8)] .* 0.5  # excitatory neurons 
-J = J[:, Int(numNeurons * 0.8)+1:end] .* -2.0  # inhibitory neurons
-J[diagind(J)] .= 0.0  # no self-excitation
+
+# J = rand(numNeurons, numNeurons)  # Random weights between all neurons  
+# J[:, 1:Int(numNeurons * 0.8)-1] .*= 0.5  # excitatory neurons 
+# J[:, Int(numNeurons * 0.8):end] .*= -0.9  # inhibitory neurons
+# J[diagind(J)] .= 0.0  # no self-excitation
+
+J = Matrix{Float64}(undef, numNeurons, numNeurons)
+
+for i = 1:numNeurons
+    J[i,:] = J_ij(i, numNeurons)
+end
+
+# J = norm_mat(J)
+
 
 # Define neuron paramters 
-Vthresh = 1.0  # Threshold voltage
+Vthresh = 10.0  # Threshold voltage
 V0 = 0.0  # Initial / Reset voltage
-I = 1.3  # DC input current 
+I = 0.5  # DC input current 
 
 # Define time range
 # 10 seconds total with time steps of 0.01s 
 T = 10 
-dt = 0.01  
+dt = 0.1  
 t = [i for i = 0:dt:T]
 
 # Initialize voltage and spike matrices
@@ -124,11 +174,12 @@ end
 # RASTER PLOT OF SIMULATION:
 # ******************************
 
+# Convert spikes into DataFrame
 df = DataFrame(spikes, :auto)
 
 # Initialize an empty vector to store the firing points
-firing_times = []
-firing_index = []
+firing_times = []  # Vector for firing times (x values)
+firing_index = []  # Vector for neuron numebr (y values)
 
 # Iterate over the columns (time steps) of the DataFrame
 count = 0
@@ -147,7 +198,12 @@ for col in eachcol(df)
     end
 end
 
-set_default_plot_size(30cm, 8cm)
-raster = plot(x=firing_times, y=firing_index, Geom.point)
-mem_v = plot(x=t, y=v[1, :], Geom.line)
-hstack(raster, mem_v)
+set_default_plot_size(30cm, 16cm)
+plot_i = 25
+raster = plot(x=firing_times, y=firing_index, Geom.point, 
+        Guide.xlabel("Time (s)"), Guide.ylabel("Neuron number"))
+mem_v = plot(x=t, y=v[plot_i, :], Geom.line, Guide.xlabel("Time (s)"), 
+            Guide.ylabel("Voltage (arbitrary)"))
+r_v = hstack(raster, mem_v)
+j_n = plot(x=1:100, y=J[plot_i,:], Geom.point)
+r_v_j = vstack(r_v, j_n)
