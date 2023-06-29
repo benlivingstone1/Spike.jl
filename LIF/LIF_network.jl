@@ -1,3 +1,21 @@
+#=
+    This script is a simulation of a ring attractor network between Leaky Integrate-and-fire 
+    (LIF) neurons. The code is adapted from Laing and Chow's 2001 paper "Stationary bumps in
+    Networks of Spiking Neurons". 
+
+    - Ben Livingstone, June '23
+=#
+
+#=
+We want to model the following equation: 
+
+dv/dt = I - v + Σ(j,m)[J/N * α(t - tm)] - Σ(l)[δ(t-tl)]
+Σ(j,m)[J/N * α(t - tm)] = Σ(j)Σ(m)[J/N * α(t - tm)]
+
+We will use Euler's method to solve for Δv at each time step
+Euler's method: v(t+1) = v(t) + dt*(dv/dt)
+=#
+
 using Gadfly, LinearAlgebra, DataFrames
 
 # Create an alpha function
@@ -38,14 +56,6 @@ function delta(t, tl)
     return ret
 end
 
-# We want to model the following equation: 
-#
-# dv/dt = I - v + Σ(j,m)[J/N * α(t - tm)] - Σ(l)[δ(t-tl)]
-# Σ(j,m)[J/N * α(t - tm)] = Σ(j)Σ(m)[J/N * α(t - tm)]
-#
-# We will use Euler's method to solve for Δv at each time step
-# Euler's method: v(t+1) = v(t) + dt*(dv/dt)
-
 function yPrime(index, I, v, J, N, dt, step, tl, s)
     tl = tl .* dt  # Times of all previous firings of neuron i
     t = step * dt
@@ -78,8 +88,6 @@ end
 
 # *********************
 # Weight functions
-#   MAYBE MAKE THE FUNCTION "WRAP"? 
-#       - neuron 1 should have higher connectivity to neuron 100? ***********************************
 # *********************
 
 function w(a, z)
@@ -129,25 +137,41 @@ function shift_vector(vec)
 end
 
 
-# ******************************
-# START OF MODEL:
-# ******************************
+#=
+########################
+START OF THE MODEL 
+########################
+=#
 
 # Define number of neurons in the model 
 numNeurons = 100
 
+###########################
 # Define weights matrix, J
+###########################
+
+# ****************
+# Random weights: 
+# ****************
 
 # J = rand(numNeurons, numNeurons)  # Random weights between all neurons  
 # J[:, 1:Int(numNeurons * 0.8)-1] .*= 0.5  # excitatory neurons 
 # J[:, Int(numNeurons * 0.8):end] .*= -0.9  # inhibitory neurons
 # J[diagind(J)] .= 0.0  # no self-excitation
 
+
+# *******************************************
+# Lateral inhibition weights without wrapping
+# *******************************************
 # J = Matrix{Float64}(undef, numNeurons, numNeurons)
 
 # for i = 1:numNeurons
 #     J[i,:] = J_ij(i, numNeurons)
 # end
+
+# *****************************************
+# Lateral inhibition weights with wrapping
+# *****************************************
 
 N_2 = numNeurons / 2  # Halfway through the range, the function is perfectly centered
 
