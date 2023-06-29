@@ -54,13 +54,15 @@ function yPrime(index, I, v, J, N, dt, step, tl, s)
 
     series_jm = zeros(N, 1)
 
+    β = 0.25
+
     for j in 1:size(J)[1]
         jn = J[j] / N
         j_spike = findall(s[j, :]) .* dt
         α = zeros(size(s[j,:])[1], 1)
         i = 1
         for tm in j_spike
-            α[i] = alpha(0.25, t-tm)
+            α[i] = alpha(β, t-tm)
             i +=1
         end
         series_jm[j] = sum(jn * j_spike)
@@ -76,6 +78,8 @@ end
 
 # *********************
 # Weight functions
+#   MAYBE MAKE THE FUNCTION "WRAP"? 
+#       - neuron 1 should have higher connectivity to neuron 100? ***********************************
 # *********************
 
 function w(a, z)
@@ -84,7 +88,7 @@ function w(a, z)
 end
 
 function J_z(z)
-    Jz = 5 * (1.1 * w((1/28), z) - w((1/20), z))
+    Jz = 5 * (1.1 * w((1/80), z) - w((1/20), z))
     return Jz
 end
 
@@ -103,9 +107,25 @@ function norm_mat(mat)
     range_val = max_val - min_val
 
     norm_mat = (mat .- min_val) ./ range_val
-    norm_mat = (norm_mat .* 1.2) .- 0.2
+    norm_mat = (norm_mat .* 1.3) .- 0.3
 
     return norm_mat
+end
+
+function shift_vector(vec)
+    N = length(vec)
+    matrix = zeros(N, N)
+
+    # Middle rows
+    matrix[Int(N/2), :] = vec
+
+    # Shifting vec for each row
+    for i = 1:N
+        shift = i - Int(N/2)
+        shifted_vec = circshift(vec, shift)
+        matrix[i, :] = shifted_vec
+    end
+    return matrix
 end
 
 
@@ -123,17 +143,24 @@ numNeurons = 100
 # J[:, Int(numNeurons * 0.8):end] .*= -0.9  # inhibitory neurons
 # J[diagind(J)] .= 0.0  # no self-excitation
 
-J = Matrix{Float64}(undef, numNeurons, numNeurons)
+# J = Matrix{Float64}(undef, numNeurons, numNeurons)
 
-for i = 1:numNeurons
-    J[i,:] = J_ij(i, numNeurons)
-end
+# for i = 1:numNeurons
+#     J[i,:] = J_ij(i, numNeurons)
+# end
 
-# J = norm_mat(J)
+N_2 = numNeurons / 2  # Halfway through the range, the function is perfectly centered
+
+# Get the corresponding weight vector to the N/2th neuron
+J_vec = J_ij(N_2, numNeurons)
+# Create the weight matrix by shifting J_vec 
+J = shift_vector(J_vec)
+# Normalize the weight matrix
+J = norm_mat(J)
 
 
 # Define neuron paramters 
-Vthresh = 10.0  # Threshold voltage
+Vthresh = 2.0  # Threshold voltage
 V0 = 0.0  # Initial / Reset voltage
 I = 0.5  # DC input current 
 
@@ -199,11 +226,13 @@ for col in eachcol(df)
 end
 
 set_default_plot_size(30cm, 16cm)
-plot_i = 25
+plot_i = 50
 raster = plot(x=firing_times, y=firing_index, Geom.point, 
-        Guide.xlabel("Time (s)"), Guide.ylabel("Neuron number"))
+        Guide.xlabel("Time (s)"), Guide.ylabel("Neuron number"), 
+        Guide.title("Raster plot for neurons 1 to $numNeurons"))
 mem_v = plot(x=t, y=v[plot_i, :], Geom.line, Guide.xlabel("Time (s)"), 
-            Guide.ylabel("Voltage (arbitrary)"))
+            Guide.ylabel("Voltage (arbitrary)"), Guide.title("Membrane voltage for neuron $plot_i"))
 r_v = hstack(raster, mem_v)
-j_n = plot(x=1:100, y=J[plot_i,:], Geom.point)
+j_n = plot(x=1:100, y=J[:, plot_i], Geom.point, Guide.xlabel("Neuron index (j)"),
+            Guide.ylabel("Connection weight"), Guide.title("Connections weights for neuron $plot_i"))
 r_v_j = vstack(r_v, j_n)
