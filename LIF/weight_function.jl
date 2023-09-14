@@ -6,7 +6,7 @@ function w(a, z)
 end
 
 function J_z(z)
-    Jz = 5 * (1.1 * w((1/80), z) - w((1/20), z))
+    Jz = 10 * (1.1 * w((1/55), z) - w((1/45), z))
     return Jz
 end
 
@@ -25,7 +25,7 @@ function norm_mat(mat)
     range_val = max_val - min_val
 
     norm_mat = (mat .- min_val) ./ range_val
-    norm_mat = (norm_mat .* 1.25) .- 0.25
+    norm_mat = (norm_mat .* 2) .- 1
 
     return norm_mat
 end

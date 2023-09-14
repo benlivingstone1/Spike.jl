@@ -9,7 +9,7 @@
 #=
 We want to model the following equation: 
 
-dv/dt = I - v + Σ(j,m)[J/N * α(t - tm)] - Σ(l)[δ(t-tl)]
+dv/dt = I - v + Σ(j,m)[Jij/N * α(t - tm)] - Σ(l)[δ(t-tl)]
 Σ(j,m)[J/N * α(t - tm)] = Σ(j)Σ(m)[J/N * α(t - tm)]
 
 We will use Euler's method to solve for Δv at each time step
@@ -37,7 +37,7 @@ end
 # sent to all connected neurons
 # β affects the rate at which the postsynaptic current decays. 
 function alpha(β, t)
-    α = β * (ℯ*(-β * t))
+    α = β * (ℯ^(-β * t))
     return α
 end
 
@@ -96,7 +96,18 @@ function w(a, z)
 end
 
 function J_z(z)
-    Jz = 5 * (1.1 * w((1/80), z) - w((1/20), z))
+    # Modifying the fractions (w(fraction, z)), will flatten the trough of the sombrero.
+    # Ratios closer to 1/50, more reliably create single bumps, this is becuase every neuron on 
+    # the edges stay inhibitory instead of approaching 0. 
+
+    # The second term of this expression determine the spread of the sombrero. By multiplying it by
+    # 1.15, the sombrero is widened, meaning that neurons farther away have a more inhibitory effect. 
+    # This gets results in only one bump being stabilized as neurons further away are inhibited by the 
+    # bump activity. 
+
+    # Jz = 5 * (1.1 * w((1/80), z) - w((1/20), z))  # original values from paper
+    # Jz = 5 * (1.1 * w((1/50), z) - w((1/50), z))  # flatter tails
+    Jz =  (1.1 * w((1/80), z) - 1.15 * w((1/10), z))
     return Jz
 end
 
@@ -180,11 +191,18 @@ J_vec = J_ij(N_2, numNeurons)
 # Create the weight matrix by shifting J_vec 
 J = shift_vector(J_vec)
 # Normalize the weight matrix
-J = norm_mat(J)
+# J = norm_mat(J)
+
+
+
+#################################
+# Meat and potatoes of the model
+#################################
+
 
 
 # Define neuron paramters 
-Vthresh = 2.0  # Threshold voltage
+Vthresh = 1.0  # Threshold voltage
 V0 = 0.0  # Initial / Reset voltage
 I = 0.5  # DC input current 
 
@@ -193,6 +211,9 @@ I = 0.5  # DC input current
 T = 10 
 dt = 0.1  
 t = [i for i = 0:dt:T]
+
+# DC input current with noise
+
 
 # Initialize voltage and spike matrices
 v = zeros(numNeurons, Int(T/dt)+1)  # Voltage for each neuron for each dt
@@ -253,10 +274,12 @@ set_default_plot_size(30cm, 16cm)
 plot_i = 50
 raster = plot(x=firing_times, y=firing_index, Geom.point, 
         Guide.xlabel("Time (s)"), Guide.ylabel("Neuron number"), 
-        Guide.title("Raster plot for neurons 1 to $numNeurons"))
+        Guide.title("Raster plot for neurons 1 to $numNeurons"), shape=[Shape.square])
 mem_v = plot(x=t, y=v[plot_i, :], Geom.line, Guide.xlabel("Time (s)"), 
             Guide.ylabel("Voltage (arbitrary)"), Guide.title("Membrane voltage for neuron $plot_i"))
-r_v = hstack(raster, mem_v)
 j_n = plot(x=1:100, y=J[:, plot_i], Geom.point, Guide.xlabel("Neuron index (j)"),
             Guide.ylabel("Connection weight"), Guide.title("Connections weights for neuron $plot_i"))
-r_v_j = vstack(r_v, j_n)
+v_j = hstack(mem_v, j_n)
+vj_raster = vstack(v_j, raster)
+
+
