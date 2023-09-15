@@ -28,3 +28,4 @@ Manifest.toml
 /plots
 *.jpg
 *.png
+*.svg
